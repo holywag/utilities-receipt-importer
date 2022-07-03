@@ -1,10 +1,7 @@
 # Utilities Receipt Importer
 
 ```
-python -m venv ./venv
-. ./venv/bin/activate
-find . -name requirements.txt | while read file; do \
-    pip install -r $file && \
-    export PYTHONPATH=$PYTHONPATH:${file%/*}; \
-done
+pip install $(ls -d api/*)
+pip install -r requirements.txt
+python main.py
 ```

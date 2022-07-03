@@ -1,14 +1,19 @@
+#!/usr/bin/env python3
+
 from datetime import datetime
 from selenium import webdriver
-from monobank import MonobankApi
-import monobank, check_gov_ua, google_oauth, google_drive, google_sheets, utils
-import os
+from monobank import Monobank
+from check_gov_ua import CheckGovUa
+import utils, google_cloud.oauth as oauth, google_cloud.drive as gdrive, google_cloud.sheets as gsheets
+import os, argparse
 
-monobank_token = '<monobank API token>'
-iban = '<iban of monobank account>'
-google_drive_directory_id = '<google drive directory ID where receipts are to be uploaded>'
-credentials_file_path = '<file containing google oath credentials>'
-spreadsheet_id = '<spreadsheet where shared links are to be added>'
+parser = argparse.ArgumentParser()
+parser.add_argument('monobank_token', help='monobank API token')
+parser.add_argument('iban', help='IBAN of monobank account')
+parser.add_argument('google_drive_directory_id', help='google drive directory ID where receipts are to be uploaded')
+parser.add_argument('credentials_file_path', help='file containing google oath credentials')
+parser.add_argument('spreadsheet_id', help='spreadsheet where shared links are to be added')
+args = parser.parse_args()
 
 PAYEE_TO_SERVICE_NAME = {
     'Електроенергія': 'electric',
@@ -20,27 +25,27 @@ PAYEE_TO_SERVICE_NAME = {
 
 print('Requesting statements info from monobank')
 
-monobank_client = monobank.MonobankApi(monobank_token)
-account_id = monobank_client.request_account_id(iban)
-statements = monobank_client.request_statements_for_last_n_days(account_id, 30)
+monobank = Monobank(args.monobank_token)
+account_id = monobank.request_account_id(args.iban)
+statements = monobank.request_statements_for_last_n_days(account_id, 30)
 
 utility_statements = []
 
 print("Starting Safari webdriver")
 with webdriver.Safari() as driver:
-    check_gov_ua_client = check_gov_ua.CheckGovUaApi(driver)
+    check_gov_ua = CheckGovUa(driver)
     for stmt in filter(lambda s: s['description'] in PAYEE_TO_SERVICE_NAME, statements):
         print(f'Getting download link for statement {stmt["receiptId"]}')
-        recaptcha_token = check_gov_ua_client.get_recaptcha_token()
-        receipt_url = check_gov_ua_client.request_download_link('monobank', stmt['receiptId'], recaptcha_token)
+        recaptcha_token = check_gov_ua.get_recaptcha_token()
+        receipt_url = check_gov_ua.request_download_link('monobank', stmt['receiptId'], recaptcha_token)
         stmt['receiptUrl'] = receipt_url
         utility_statements.append(stmt)
 
-creds = google_oauth.GoogleOAuth(credentials_file_path).authenticate(
-    google_oauth.GoogleOAuthScopes.DRIVE_FILE, google_oauth.GoogleOAuthScopes.SHEETS)
+creds = oauth.GoogleOAuth(args.credentials_file_path).authenticate(
+    oauth.GoogleOAuthScopes.DRIVE_FILE, oauth.GoogleOAuthScopes.SHEETS)
 
-google_drive_client = google_drive.GoogleDriveApi(creds)
-google_sheets_client = google_sheets.GoogleSheetsApi(creds)
+drive = gdrive.GoogleDriveApi(creds)
+sheets = gsheets.GoogleSheetsApi(creds)
 
 for stmt in utility_statements:
     service_name = PAYEE_TO_SERVICE_NAME[stmt['description']]
@@ -51,24 +56,24 @@ for stmt in utility_statements:
 
     # todo: check if such file already exists
     print(f'Uploading {receipt_file_name} to Google Drive')
-    file_id = google_drive_client.upload_file_to_directory(receipt_file_name, 'application/pdf', google_drive_directory_id)
+    file_id = drive.upload_file_to_directory(receipt_file_name, 'application/pdf', args.google_drive_directory_id)
 
     print(f'Removing temporary file {receipt_file_name}')
     os.remove(receipt_file_name)
 
     print(f'Enabling link sharing for {receipt_file_name}')
-    google_drive_client.enable_link_sharing(file_id, "reader", "anyone")
+    drive.enable_link_sharing(file_id, "reader", "anyone")
 
     shared_link = f'https://drive.google.com/file/d/{file_id}/view?usp=sharing'
 
     print(f'Adding {shared_link} to Google Sheets')
-    range_values = google_sheets_client.get_range(spreadsheet_id, f'{service_name}!G:G', google_sheets.ValueRenderOption.FORMULA)
+    range_values = sheets.get_range(args.spreadsheet_id, f'{service_name}!G:G', gsheets.ValueRenderOption.FORMULA)
     hyperlink_formula = f'=HYPERLINK("{shared_link}", {-stmt["amount"]/100})'
-    values = google_sheets_client.update_range(
-        spreadsheet_id,
+    values = sheets.update_range(
+        args.spreadsheet_id,
         f'{service_name}!G{len(range_values)}',
         [[hyperlink_formula]],
-        google_sheets.ValueInputOption.USER_ENTERED,
+        gsheets.ValueInputOption.USER_ENTERED,
         True,
-        google_sheets.ValueRenderOption.UNFORMATTED_VALUE)
+        gsheets.ValueRenderOption.UNFORMATTED_VALUE)
     print(f'Link to {service_name} receipt for {values[0][0]} UAH has been added to the spreadsheet')
