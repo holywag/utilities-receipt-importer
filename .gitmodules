@@ -1,0 +1,9 @@
+[submodule "api/mono-api"]
+	path = api/mono-api
+	url = git@github.com:holywag/mono-api.git
+[submodule "api/check-gov-ua-api"]
+	path = api/check-gov-ua-api
+	url = git@github.com:holywag/check-gov-ua-api.git
+[submodule "api/google-cloud-api"]
+	path = api/google-cloud-api
+	url = git@github.com:holywag/google-cloud-api.git
