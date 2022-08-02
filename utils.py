@@ -29,7 +29,11 @@ UTILITY_SERVICES = {
     '536354****1179': {
         'service_name': 'rent',
         'mcc': 4829,
-    }
+    },
+    '414960****2931': {
+        'service_name': 'rent',
+        'mcc': 4829,
+    },
 }
 
 def contains_permission(permissions, type, role): 

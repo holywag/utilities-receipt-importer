@@ -25,7 +25,7 @@ check_gov_ua = None
 print('Requesting statements from monobank')
 
 account_id = monobank.request_account_id(args.iban)
-statements = monobank.request_statements_for_last_n_days(account_id, 20)
+statements = monobank.request_statements_for_last_n_days(account_id, 1)
 
 print('Synchronizing with Google Drive')
 
