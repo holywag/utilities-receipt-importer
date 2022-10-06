@@ -25,7 +25,7 @@ check_gov_ua = None
 print('Requesting statements from monobank')
 
 account_id = monobank.request_account_id(args.iban)
-statements = monobank.request_statements_for_last_n_days(account_id, 1)
+statements = monobank.request_statements_for_last_n_days(account_id, 5)
 
 print('Synchronizing with Google Drive')
 
@@ -62,12 +62,13 @@ for stmt in filter(utils.is_utility_statement, statements):
     shared_link = f'https://drive.google.com/file/d/{google_drive_id}/view?usp=sharing'
 
     print(f'Verifying that the link to {receipt_file_name} is added to Google Sheets')
-    range_values = sheets.get_range(args.spreadsheet_id, f'{service_name}!G:G', gsheets.ValueRenderOption.FORMULA)
+    last_row_idx = len(sheets.get_range(args.spreadsheet_id, f'{service_name}!G:G', gsheets.ValueRenderOption.FORMATTED_VALUE))
+    last_formula = sheets.get_range(args.spreadsheet_id, f'{service_name}!G{last_row_idx}', gsheets.ValueRenderOption.FORMULA)[0][0]
     hyperlink_formula = f'=HYPERLINK("{shared_link}", {-stmt["amount"]/100})'
-    if hyperlink_formula != range_values[-1][0]:
+    if hyperlink_formula != last_formula:
         values = sheets.update_range(
             args.spreadsheet_id,
-            f'{service_name}!G{len(range_values)}',
+            f'{service_name}!G{last_row_idx}',
             [[hyperlink_formula]],
             gsheets.ValueInputOption.USER_ENTERED,
             True,

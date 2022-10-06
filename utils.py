@@ -1,5 +1,5 @@
 from datetime import datetime
-import requests
+import requests, time
 
 UTILITY_SERVICES = {
     'Електроенергія': {
@@ -65,4 +65,5 @@ def download_file(url, output_file_path):
             return
         else:
             print(f'{response.status_code} {response.reason} - trying again')
+            time.sleep(1)
     raise Exception(f'Cannot download file from {url}')
