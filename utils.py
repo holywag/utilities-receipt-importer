@@ -59,6 +59,7 @@ def is_utility_statement(stmt):
 
 def make_receipt_file_name(service_name, stmt):
     time = datetime.fromtimestamp(int(stmt['time']))
+    # todo: handle periods between years
     if service_name == 'rent':
         return f'rent_from_{time.year}_{time.month:02d}_18_to_{time.year}_{time.month+1:02d}_17.pdf'
     else:
