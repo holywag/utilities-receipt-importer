@@ -26,6 +26,14 @@ UTILITY_SERVICES = {
         'service_name': 'water_service_fee',
         'mcc': 4900,
     },
+    'Яцишин Володимир': {
+        'service_name': 'rent',
+        'mcc': 4829,
+    },
+    "522119****5559": {
+        'service_name': 'rent',
+        'mcc': 4829,
+    },
     '536354****1179': {
         'service_name': 'rent',
         'mcc': 4829,
